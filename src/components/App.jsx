@@ -26,7 +26,7 @@ export default function App() {
   const [totalHits, setTotalHits] = useState(0);
 
   useEffect(() => {
-    if (searchValue && page) {
+    if (searchValue) {
       fetchData(searchValue, page);
     }
   }, [searchValue, page]);
