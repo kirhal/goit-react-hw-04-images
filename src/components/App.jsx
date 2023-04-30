@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchImages } from '../instruments/fetchAPI';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import css from './App.module.css';
@@ -17,29 +17,26 @@ Notify.init({
   timeout: 1500,
 });
 
-export class App extends Component {
-  state = {
-    searchValue: '',
-    images: [],
-    isLoading: false,
-    error: null,
-    page: 0,
-    totalHits: 0,
-  };
+export default function App() {
+  const [searchValue, setSearchValue] = useState('');
+  const [images, setImages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalHits, setTotalHits] = useState(0);
 
-  async componentDidUpdate(_, prevState) {
-    const { searchValue, page } = this.state;
-    if (prevState.searchValue !== searchValue || prevState.page !== page) {
-      this.fetchData(searchValue, page);
+  useEffect(() => {
+    if (searchValue && page) {
+      fetchData(searchValue, page);
     }
-  }
+  }, [searchValue, page]);
 
-  fetchData = async (searchValue, page) => {
+  const fetchData = async (searchValue, page) => {
     try {
-      this.setState({ isLoading: true });
+      setIsLoading(true);
       const data = await fetchImages(searchValue, page);
       if (data.hits.length === 0) {
-        this.setState({ error: 'No results' });
+        setError('No results');
       }
       const imagesArr = data.hits.map(
         ({ id, webformatURL, largeImageURL }) => ({
@@ -48,19 +45,16 @@ export class App extends Component {
           largeImageURL,
         })
       );
-      this.setState(({ images }) => ({
-        images: [...images, ...imagesArr],
-        totalHits: data.totalHits,
-      }));
+      setImages(prev => [...prev, ...imagesArr]);
+      setTotalHits(data.totalHits);
     } catch (error) {
-      this.setState({ error });
+      setError(error);
     } finally {
-      this.setState({ isLoading: false });
+      setIsLoading(false);
     }
   };
 
-  onSubmit = e => {
-    const { searchValue } = this.state;
+  const onSubmit = e => {
     e.preventDefault();
     const form = e.currentTarget;
     const inputValue = form.elements.input.value.trim().toLowerCase();
@@ -70,26 +64,28 @@ export class App extends Component {
     } else if (inputValue === searchValue) {
       Notify.info(`Try another search word or click 'Load more' button`);
       return;
-    } else this.setState({ searchValue: inputValue, page: 1, images: [] });
+    } else {
+      setSearchValue(inputValue);
+      setPage(1);
+      setImages([]);
+    }
   };
 
-  onClick = () => {
-    this.setState(prev => ({ page: prev.page + 1 }));
+  const onClick = () => {
+    setPage(prev => prev + 1);
   };
 
-  render() {
-    const { images, isLoading, error, totalHits } = this.state;
-    const result = totalHits - images.length;
-    return (
-      <div className={css.App}>
-        <Searchbar onSubmit={this.onSubmit} />
-        {error && <h1>{error}</h1>}
-        {images.length > 0 && <ImageGallery images={images} />}
-        {isLoading && <Loader />}
-        {result !== 0 && !isLoading && images.length !== 0 && (
-          <Button onClick={this.onClick} />
-        )}
-      </div>
-    );
-  }
+  const result = totalHits - images.length;
+
+  return (
+    <div className={css.App}>
+      <Searchbar onSubmit={onSubmit} />
+      {error && <h1>{error}</h1>}
+      {images.length > 0 && <ImageGallery images={images} />}
+      {isLoading && <Loader />}
+      {result !== 0 && !isLoading && images.length !== 0 && (
+        <Button onClick={onClick} />
+      )}
+    </div>
+  );
 }
